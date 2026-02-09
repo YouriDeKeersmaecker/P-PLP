@@ -1,0 +1,24 @@
+[build-system]
+requires = ["hatchling >= 1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "p_plp"
+version = "0.0.1"
+authors = [
+  { name="Youri De Keersmaecker", email="youridkaramel@gmail.com" },
+]
+description = "A python alternative of the R-PLP framework"
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+license = { text = "MIT" }
+license-files = ["LICEN[CS]E*"]
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+]
