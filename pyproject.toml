@@ -21,7 +21,8 @@ license-files = ["LICEN[CS]E*"]
 dependencies = [
   "sqlalchemy>=2.0",
   "psycopg2-binary>=2.9",
-  "python-dotenv>=1.0"
+  "python-dotenv>=1.0",
+  "pandas>=2.0"
 ]
 
 [project.optional-dependencies]
