@@ -1,5 +1,9 @@
 Hello there
 
+python -m venv .venv
+
+.\.venv\Scripts\Activate
+
 pip install -e .[dev]
 
 pytest
