@@ -1,0 +1,94 @@
+Confirm CDM is complete
+Check row counts for:
+
+person
+
+observation_period
+
+condition_occurrence
+
+drug_exposure
+
+visit_occurrence
+
+concept
+
+If person or concept is empty, stop and fix ETL.
+
+Define your working schema
+Create a separate schema for your project (e.g., plp_work).
+All derived tables (cohorts, features, labels) go there.
+
+Second phase: define the prediction problem
+
+Define the target cohort
+Example: first exposure to Drug X, or first diagnosis of Condition Y.
+Materialize into:
+
+target_cohort
+(subject_id, cohort_start_date, cohort_end_date)
+
+Define the outcome cohort
+Example: hospitalization, specific adverse event, etc.
+Materialize into:
+
+outcome_cohort
+(subject_id, cohort_start_date, cohort_end_date)
+
+Define time-at-risk
+Example: 1–365 days after index.
+Decide:
+
+how many days?
+
+exclude same-day events?
+
+require continuous observation?
+
+At this point, you have a clearly defined prediction task.
+
+Third phase: construct the modeling dataset
+
+Restrict to valid observation time
+Ensure each subject has sufficient prior observation (e.g., ≥365 days before index).
+
+Feature extraction
+Choose lookback window (e.g., 365 days before index).
+
+For each subject, extract:
+
+condition_concept_id
+
+drug_concept_id
+
+procedure_concept_id
+
+measurement_concept_id (optional early)
+
+visit_concept_id (optional)
+
+Aggregate as:
+
+binary (“any occurrence”) or
+
+count features
+
+Store in long format:
+
+features_long
+(subject_id, feature_key, value)
+
+Build outcome labels
+
+labels
+(subject_id, index_date, y)
+
+y = 1 if outcome occurs in time-at-risk, else 0.
+
+Convert to ML matrix in Python
+
+join features_long + labels
+
+build sparse matrix (scipy csr_matrix)
+
+build feature dictionary (feature_key → column index)
