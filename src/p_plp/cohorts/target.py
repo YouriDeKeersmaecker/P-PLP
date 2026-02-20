@@ -1,8 +1,7 @@
-from sqlalchemy import text
 from p_plp.db.utils import run_sql, fetch_df
 from p_plp.db.config import CDM_SCHEMA, WORK_SCHEMA
 
-
+# first diagnosis of a condition
 def generate_target_cohort(engine, condition_concept_id: int):
     sql = f"""
     drop table if exists {WORK_SCHEMA}.target_cohort;

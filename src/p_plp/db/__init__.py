@@ -5,7 +5,6 @@ from .utils import (
     run_sql,
     fetch_df,
     list_cdm_tables,
-    list_observed_conditions,
 )
 
 __all__ = [
@@ -15,5 +14,4 @@ __all__ = [
     "run_sql",
     "fetch_df",
     "list_cdm_tables",
-    "list_observed_conditions",
 ]
