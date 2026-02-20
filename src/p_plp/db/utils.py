@@ -45,23 +45,29 @@ def list_cdm_tables(engine) -> pd.DataFrame:
     return fetch_df(engine, sql, {"schema": CDM_SCHEMA})
 
 
-def list_conditions(engine, search: str | None = None, limit: int = 50) -> pd.DataFrame:
+def list_observed_conditions(engine, search: str | None = None, limit: int = 20):
     sql = f"""
     select
         c.concept_id,
         c.concept_name,
         c.vocabulary_id,
-        c.domain_id
-    from {CDM_SCHEMA}.concept c
-    where c.domain_id = 'Condition'
+        count(*) as n_occurrences
+    from {CDM_SCHEMA}.condition_occurrence co
+    join {CDM_SCHEMA}.concept c
+        on c.concept_id = co.condition_concept_id
+    where 1=1
     """
 
-    params: dict = {"limit": int(limit)}
+    params = {"limit": int(limit)}
 
     if search:
         sql += " and lower(c.concept_name) like lower(:search)"
         params["search"] = f"%{search}%"
 
-    sql += " order by c.concept_name limit :limit"
+    sql += """
+    group by c.concept_id, c.concept_name, c.vocabulary_id
+    order by n_occurrences desc
+    limit :limit
+    """
 
     return fetch_df(engine, sql, params)

@@ -1,5 +1,5 @@
 from sqlalchemy import text
-from p_plp.db.utils import run_sql
+from p_plp.db.utils import run_sql, fetch_df
 from p_plp.db.config import CDM_SCHEMA, WORK_SCHEMA
 
 
@@ -17,5 +17,12 @@ def generate_target_cohort(engine, condition_concept_id: int):
     group by person_id;
     """
 
-    with engine.begin() as conn:
-        run_sql(engine, sql, {"concept_id": condition_concept_id})
+    run_sql(engine, sql, {"concept_id": condition_concept_id})
+
+    select_sql = f"""
+    select *
+    from {WORK_SCHEMA}.target_cohort
+    order by cohort_start_date
+    """
+
+    return fetch_df(engine, select_sql)
