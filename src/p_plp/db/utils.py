@@ -27,3 +27,8 @@ def get_cdm_table(
 
     with engine.connect() as conn:
         return pd.read_sql(text(sql), conn)
+    
+
+def run_sql(engine, sql: str, params: dict | None = None):
+    with engine.begin() as conn:
+        conn.execute(text(sql), params or {})
