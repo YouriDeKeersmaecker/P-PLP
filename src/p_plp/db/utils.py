@@ -1,7 +1,7 @@
 import pandas as pd
 from sqlalchemy import text
 from enum import Enum
-from .config import CDM_SCHEMA
+from .config import CDM_SCHEMA, WORK_SCHEMA
 
 
 class CdmTable(str, Enum):
@@ -32,7 +32,7 @@ def get_cdm_table(engine, table: CdmTable, limit: int | None = 20) -> pd.DataFra
         return fetch_df(engine, sql, {"limit": int(limit)})
     return fetch_df(engine, sql)
 
-def list_cdm_tables(engine) -> pd.DataFrame:
+def list_tables(engine, schema: str) -> pd.DataFrame:
     sql = """
     select
         table_name
@@ -42,6 +42,13 @@ def list_cdm_tables(engine) -> pd.DataFrame:
     order by table_name
     """
 
-    return fetch_df(engine, sql, {"schema": CDM_SCHEMA})
+    return fetch_df(engine, sql, {"schema": schema})
+
+def list_cdm_tables(engine) -> pd.DataFrame:
+    return list_tables(engine, CDM_SCHEMA)
+
+
+def list_work_tables(engine) -> pd.DataFrame:
+    return list_tables(engine, WORK_SCHEMA)
 
 
