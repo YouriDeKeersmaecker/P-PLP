@@ -5,11 +5,10 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 
-from p_plp.modeling.dataset import load_df, make_X_y
+from p_plp.modeling import *
+from p_plp.db import *
 
-
-def train(test_size=0.2, random_state=42):
-    df = load_df()
+def train_pipeline(df, test_size=0.2, random_state=42):
     X, y, num_cols, cat_cols = make_X_y(df)
 
     X_train, X_test, y_train, y_test = train_test_split(
@@ -61,10 +60,3 @@ def train(test_size=0.2, random_state=42):
 
     model.fit(X_train, y_train)
     return model, X_test, y_test
-
-
-if __name__ == "__main__":
-    model, X_test, y_test = train()
-    print("Trained baseline pipeline.")
-    print("Test rows:", len(y_test))
-    print("Features used:", X_test.shape[1])
