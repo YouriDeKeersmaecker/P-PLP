@@ -3,6 +3,7 @@ from .dataset import (
 )
 
 from .train import (
+    get_classifier,
     train_pipeline,
 )
 
@@ -12,6 +13,7 @@ from .evaluate import (
 
 __all__ = [
     "make_X_y",
+    "get_classifier",
     "train_pipeline",
     "evaluate",
 ]
