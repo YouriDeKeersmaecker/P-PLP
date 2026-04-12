@@ -23,6 +23,8 @@ dependencies = [
   "psycopg2-binary>=2.9",
   "python-dotenv>=1.0",
   "pandas>=2.0",
+  "duckdb>=1.1",
+  "duckdb-engine>=0.13",
   "scikit-learn>=1.4",
 ]
 
@@ -31,3 +33,11 @@ dev = [
   "pytest",
   "jupyter",
 ]
+docs = [
+  "mkdocs>=1.6",
+  "mkdocs-material>=9.5",
+  "mkdocstrings[python]>=0.26",
+]
+
+[tool.pytest.ini_options]
+addopts = "--basetemp=.pytest_tmp"

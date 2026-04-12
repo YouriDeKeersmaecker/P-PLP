@@ -2,8 +2,9 @@
 
 import pandas as pd
 
-from p_plp.db import *
-from p_plp.db.config import CDM_SCHEMA, WORK_SCHEMA
+from p_plp.db import execute_sql, read_sql_df
+from p_plp.db.config import get_engine_config
+from p_plp.db.sql_utils import sql_age_expression
 
 
 def build_demographic_features(engine) -> None:
@@ -16,15 +17,19 @@ def build_demographic_features(engine) -> None:
       - age (integer, age at index_date)
       - gender_concept_id
     """
+    engine_config = get_engine_config(engine)
+    cdm_schema = engine_config.cdm_schema
+    work_schema = engine_config.work_schema
+    age_sql = sql_age_expression("b.index_date")
     sql = f"""
-    drop table if exists {WORK_SCHEMA}.demographic_features;
+    drop table if exists {work_schema}.demographic_features;
 
-    create table {WORK_SCHEMA}.demographic_features as
+    create table {work_schema}.demographic_features as
     with base as (
         select
             l.subject_id,
             l.index_date
-        from {WORK_SCHEMA}.labels l
+        from {work_schema}.labels l
     ),
     p as (
         select
@@ -33,34 +38,25 @@ def build_demographic_features(engine) -> None:
             month_of_birth,
             day_of_birth,
             gender_concept_id
-        from {CDM_SCHEMA}.person
+        from {cdm_schema}.person
     )
     select
         b.subject_id,
-        -- Build a birthdate; if month/day are missing, default to mid-year/mid-month
-        extract(
-            year from age(
-                b.index_date,
-                make_date(
-                    p.year_of_birth,
-                    coalesce(nullif(p.month_of_birth, 0), 6),
-                    coalesce(nullif(p.day_of_birth, 0), 15)
-                )
-            )
-        )::int as age,
+        {age_sql} as age,
         p.gender_concept_id
     from base b
     join p
       on p.person_id = b.subject_id
     ;
     """
-    run_sql(engine, sql)
+    execute_sql(engine, sql)
 
 
 def get_demographic_features(engine) -> pd.DataFrame:
+    work_schema = get_engine_config(engine).work_schema
     sql = f"""
     select *
-    from {WORK_SCHEMA}.demographic_features
+    from {work_schema}.demographic_features
     order by subject_id
     """
-    return fetch_df(engine, sql)
+    return read_sql_df(engine, sql)

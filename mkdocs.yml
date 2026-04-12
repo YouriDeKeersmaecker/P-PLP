@@ -1,0 +1,22 @@
+site_name: P-PLP
+site_description: Documentation for the P-PLP Python library
+repo_name: P-PLP
+
+theme:
+  name: material
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths:
+            - src
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Usage: usage.md
+  - Database Layer: db.md
+  - Cohorts Layer: cohorts.md
+  - API: api.md

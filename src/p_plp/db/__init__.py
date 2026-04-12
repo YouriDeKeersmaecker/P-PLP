@@ -1,19 +1,27 @@
 from .engine import get_engine
-from .utils import (
-    get_cdm_table,
+from .config import get_engine_config
+from .table_io import (
+    read_table,
     CdmTable,
-    run_sql,
-    fetch_df,
+    execute_sql,
+    read_sql_df,
     list_cdm_tables,
-    list_work_tables,
+)
+from .validate import (
+    validate_connection,
+    validate_schemas,
+    validate_tables,
 )
 
 __all__ = [
     "get_engine",
-    "get_cdm_table",
+    "get_engine_config",
+    "read_table",
     "CdmTable",
-    "run_sql",
-    "fetch_df",
     "list_cdm_tables",
-    "list_work_tables",
+    "execute_sql",
+    "read_sql_df",
+    "validate_connection",
+    "validate_schemas",
+    "validate_tables",
 ]

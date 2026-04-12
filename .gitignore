@@ -3,6 +3,10 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+# data
+data/
+outputs/
+
 # C extensions
 *.so
 
@@ -50,6 +54,7 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 cover/
+.pytest_tmp/
 
 # Translations
 *.mo
@@ -137,6 +142,7 @@ celerybeat.pid
 # Environments
 .env
 .envrc
+.Renviron
 .venv
 env/
 venv/

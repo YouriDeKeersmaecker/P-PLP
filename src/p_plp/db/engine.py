@@ -1,44 +1,55 @@
-from sqlalchemy import create_engine, text
-from .config import DATABASE_URL, WORK_SCHEMA
+from sqlalchemy import create_engine
+from sqlalchemy.exc import NoSuchModuleError
 
-RESET_SCHEMA=True
+from .config import get_source_config
+from .validate import (
+    validate_connection as _validate_connection,
+    validate_schemas as _validate_schemas,
+    validate_tables as _validate_tables,
+)
+
+DEFAULT_REQUIRED_CDM_TABLES = ["person", "observation_period", "cohort"]
 
 
-def get_engine():
-    engine = create_engine(DATABASE_URL, future=True)
+def get_engine(
+    source_name: str | None = None,
+    *,
+    database_url: str | None = None,
+    database_path: str | None = None,
+    cdm_schema: str | None = None,
+    vocabulary_schema: str | None = None,
+    work_schema: str | None = None,
+    require_work_schema: bool = False,
+    required_cdm_tables: list[str] | None = DEFAULT_REQUIRED_CDM_TABLES,
+    required_work_tables: list[str] | None = None,
+):
+    """Create a configured SQLAlchemy engine for the requested datasource."""
 
-    if RESET_SCHEMA:
-        _reset_schema(engine, WORK_SCHEMA)
+    source_config = get_source_config(
+        source_name=source_name,
+        database_url=database_url,
+        database_path=database_path,
+        cdm_schema=cdm_schema,
+        vocabulary_schema=vocabulary_schema,
+        work_schema=work_schema,
+    )
+    try:
+        engine = create_engine(source_config.database_url, future=True)
+    except NoSuchModuleError as exc:
+        if source_config.source_name == "eunomia":
+            raise RuntimeError(
+                "DuckDB SQLAlchemy support is not installed. Run `pip install duckdb-engine` or reinstall the project dependencies."
+            ) from exc
+        raise
+    setattr(engine, "_plp_source_config", source_config)
 
-    _ensure_schema(engine, WORK_SCHEMA)
+    _validate_connection(engine)
+    _validate_schemas(engine, require_work_schema=require_work_schema)
+    if required_cdm_tables or required_work_tables:
+        _validate_tables(
+            engine,
+            required_cdm_tables=required_cdm_tables,
+            required_work_tables=required_work_tables,
+        )
 
     return engine
-
-
-def _reset_schema(engine, schema):
-    ddl = f"""
-    DROP SCHEMA IF EXISTS {schema} CASCADE;
-    CREATE SCHEMA {schema};
-    """
-    with engine.begin() as conn:
-        conn.execute(text(ddl))
-
-
-def _ensure_schema(engine, schema):
-    ddl = f"""
-    CREATE SCHEMA IF NOT EXISTS {schema};
-
-    CREATE TABLE IF NOT EXISTS {schema}.target_cohort (
-        subject_id BIGINT,
-        cohort_start_date DATE,
-        cohort_end_date DATE
-    );
-
-    CREATE TABLE IF NOT EXISTS {schema}.outcome_cohort (
-        subject_id BIGINT,
-        cohort_start_date DATE,
-        cohort_end_date DATE
-    );
-    """
-    with engine.begin() as conn:
-        conn.execute(text(ddl))
