@@ -54,7 +54,7 @@ def build_full_query(engine, config) -> str:
     {' '.join(joins)}
     """
 
-    return run_feature_query(engine, final_sql)
+    return final_sql
 
 
 def run_feature_query(engine, config) -> pd.DataFrame:

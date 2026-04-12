@@ -1,7 +1,7 @@
 from .features import (
-    build_full_query,
+    run_feature_query,
 )
 
 __all__ = [
-    "build_full_query",
+    "run_feature_query",
 ]
