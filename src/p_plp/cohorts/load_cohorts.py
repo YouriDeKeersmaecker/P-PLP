@@ -56,31 +56,54 @@ def load_atlas_cohort(
     )
 
 
-def read_cohort_table(
-    engine,
-    cohort_definition_id: int,
-    limit: int | None = None,
-):
-    """Backward-compatible alias for reading generated Atlas cohorts."""
-
-    return read_atlas_cohort(
-        engine,
-        cohort_definition_id=cohort_definition_id,
-        limit=limit,
-    )
-
-
-def load_cohort_from_sql(
+def load_atlas_cohort_to_work_table(
     engine,
     sql: str,
     cohort_definition_id: int,
+    table_name: str,
     limit: int | None = None,
 ):
-    """Backward-compatible alias for executing and reading Atlas cohorts."""
+    """Execute Atlas SQL, then copy the cohort rows into a work table and return them."""
 
-    return load_atlas_cohort(
+    config = get_engine_config(engine)
+    if config is None:
+        raise ValueError("No engine configuration is attached.")
+    if not config.work_schema:
+        raise ValueError("No work schema is configured.")
+
+    load_atlas_cohort(
         engine,
         sql=sql,
         cohort_definition_id=cohort_definition_id,
-        limit=limit,
+        limit=None,
     )
+
+    materialize_sql = f"""
+    create schema if not exists {config.work_schema};
+    drop table if exists {config.work_schema}.{table_name};
+    create table {config.work_schema}.{table_name} as
+    select
+        subject_id,
+        cohort_start_date,
+        cohort_end_date
+    from {config.cdm_schema}.cohort
+    where cohort_definition_id = :cohort_definition_id
+    order by cohort_start_date, subject_id
+    """
+    execute_sql(
+        engine,
+        materialize_sql,
+        {"cohort_definition_id": int(cohort_definition_id)},
+    )
+
+    select_sql = f"""
+    select *
+    from {config.work_schema}.{table_name}
+    order by cohort_start_date, subject_id
+    """
+    params = {}
+    if limit is not None:
+        select_sql += "\nlimit :limit"
+        params["limit"] = int(limit)
+
+    return read_sql_df(engine, select_sql, params)
