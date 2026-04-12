@@ -31,14 +31,20 @@ def generate_feature_cte(engine, name, cfg):
     """
 
 
-def build_full_query(engine, config) -> str:
+def build_full_query(engine, config, base_configs) -> str:
     engine_config = get_engine_config(engine)
 
     ctes = []
     joins = []
 
     for name, cfg in config.items():
-        ctes.append(generate_feature_cte(engine, name, cfg))
+        resolved_cfg = {
+            **base_configs[cfg["base"]],
+            **cfg,
+        }
+        resolved_cfg.pop("base", None)
+
+        ctes.append(generate_feature_cte(engine, name, resolved_cfg))
         joins.append(f"LEFT JOIN {name} USING (subject_id)")
 
     cte_sql = ",\n".join(ctes)
@@ -57,9 +63,9 @@ def build_full_query(engine, config) -> str:
     return final_sql
 
 
-def run_feature_query(engine, config) -> pd.DataFrame:
+def run_feature_query(engine, config, base_config) -> pd.DataFrame:
     """Build and execute the feature query, returning the result as a DataFrame."""
 
-    sql = build_full_query(engine, config)
+    sql = build_full_query(engine, config, base_config)
     return read_sql_df(engine, sql)
 
