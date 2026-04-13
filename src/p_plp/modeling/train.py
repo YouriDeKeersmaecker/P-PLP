@@ -1,5 +1,4 @@
 from sklearn.base import clone
-from sklearn.model_selection import train_test_split
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
@@ -7,7 +6,7 @@ from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 
-from p_plp.modeling.dataset import make_X_y
+from p_plp.modeling.dataset import split_dataset
 
 
 def get_classifier(model_name: str = "logreg", random_state: int = 42):
@@ -32,15 +31,14 @@ def get_classifier(model_name: str = "logreg", random_state: int = 42):
 
 
 def train_pipeline(df, clf=None, model_name: str = "logreg", test_size=0.2, random_state=42):
-    X, y, num_cols, cat_cols = make_X_y(df)
-
-    X_train, X_test, y_train, y_test = train_test_split(
-        X,
-        y,
-        test_size=float(test_size),
-        random_state=int(random_state),
-        stratify=y if y.nunique() > 1 else None,
+    X_train, X_test, y_train, y_test = split_dataset(
+        df,
+        test_size=test_size,
+        random_state=random_state,
     )
+
+    num_cols = X_train.select_dtypes(include=["number", "bool"]).columns.tolist()
+    cat_cols = [c for c in X_train.columns if c not in num_cols]
 
     transformers = []
 

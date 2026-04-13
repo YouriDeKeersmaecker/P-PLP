@@ -1,28 +1,34 @@
 import pandas as pd
-from p_plp.feature_engineering import *
+from sklearn.model_selection import train_test_split
 
-TARGET_COL = "outcome_flag"
-DROP_COLS = {
-    "subject_id",
-    "cohort_start_date",
-    "cohort_end_date",
-    "index_date",
-}
+TARGET_COL = "label"
 
-def make_X_y(df: pd.DataFrame):
-    if TARGET_COL not in df.columns:
-        raise ValueError(f"Missing target column: {TARGET_COL}")
+def _prepare_X_y(
+    df: pd.DataFrame,
+    target_col: str = TARGET_COL,
+):
+    if target_col not in df.columns:
+        raise ValueError(f"Missing target column: {target_col}")
 
-    y = df[TARGET_COL].astype(int)
+    y = df[target_col].astype(int)
+    feature_cols = [col for col in df.columns if col != target_col]
+    X = df[feature_cols].copy().dropna(axis=1, how="all")
 
-    # Dynamic features: everything except ids/dates/target
-    feature_cols = [c for c in df.columns if c != TARGET_COL and c not in DROP_COLS]
-    X = df[feature_cols].copy()
+    return X, y
 
-    X = X.dropna(axis=1, how="all")
 
-    # Infer column types
-    num_cols = X.select_dtypes(include=["number", "bool"]).columns.tolist()
-    cat_cols = [c for c in X.columns if c not in num_cols]
+def split_dataset(
+    df: pd.DataFrame,
+    target_col: str = TARGET_COL,
+    test_size: float = 0.2,
+    random_state: int = 42,
+):
+    X, y = _prepare_X_y(df, target_col=target_col)
 
-    return X, y, num_cols, cat_cols
+    return train_test_split(
+        X,
+        y,
+        test_size=float(test_size),
+        random_state=int(random_state),
+        stratify=y if y.nunique() > 1 else None,
+    )

@@ -1,5 +1,5 @@
 from .dataset import (
-    make_X_y,
+    split_dataset,
 )
 
 from .train import (
@@ -11,12 +11,8 @@ from .evaluate import (
     evaluate,
 )
 
-from .artifacts import (
-    save_model_outputs,
-)
-
 __all__ = [
-    "make_X_y",
+    "split_dataset",
     "get_classifier",
     "train_pipeline",
     "evaluate",
