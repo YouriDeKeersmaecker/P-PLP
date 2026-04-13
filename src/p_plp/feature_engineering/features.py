@@ -2,6 +2,22 @@ import pandas as pd
 
 from p_plp.db import get_engine_config, read_sql_df
 
+NON_FEATURE_COLUMNS = [
+    "subject_id",
+    "index_date",
+    "tar_start_date",
+    "tar_end_date",
+    "outcome_date",
+]
+
+
+def drop_non_feature_columns(
+    df: pd.DataFrame,
+    columns: list[str] | None = None,
+) -> pd.DataFrame:
+    cols_to_drop = columns if columns is not None else NON_FEATURE_COLUMNS
+    return df.drop(columns=[col for col in cols_to_drop if col in df.columns])
+
 
 def generate_feature_cte(engine, name, cfg):
     config = get_engine_config(engine)
@@ -99,4 +115,5 @@ def run_feature_query(engine, config, base_config) -> pd.DataFrame:
     """Build and execute the feature query, returning the result as a DataFrame."""
 
     sql = build_full_query(engine, config, base_config)
-    return read_sql_df(engine, sql)
+    full_labels_df = read_sql_df(engine, sql)
+    return drop_non_feature_columns(full_labels_df, NON_FEATURE_COLUMNS)
