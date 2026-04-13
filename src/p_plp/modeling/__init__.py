@@ -7,6 +7,10 @@ from .train import (
     train_pipeline,
 )
 
+from .artifacts import (
+    save_model_outputs,
+)
+
 from .evaluate import (
     evaluate,
 )
