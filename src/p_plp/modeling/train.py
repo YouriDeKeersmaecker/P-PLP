@@ -11,42 +11,15 @@ from sklearn.model_selection import GridSearchCV, StratifiedKFold, cross_validat
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.feature_selection import SelectKBest, f_classif
+from sklearn.svm import SVC
 
 from .dataset import TARGET_COL, split_dataset
-
-DEFAULT_TARGET_CANDIDATES = (TARGET_COL, "outcome_flag")
-
 
 @dataclass(frozen=True)
 class FeatureGroups:
     binary_numeric: list[str]
     continuous_numeric: list[str]
     categorical: list[str]
-
-
-def _resolve_target_col(df: pd.DataFrame, target_col: str | None = None) -> str:
-    if target_col is not None:
-        if target_col not in df.columns:
-            raise ValueError(f"Missing target column: {target_col}")
-        return target_col
-
-    for candidate in DEFAULT_TARGET_CANDIDATES:
-        if candidate in df.columns:
-            return candidate
-
-    raise ValueError(
-        "Could not infer target column. Pass target_col explicitly or include one of: "
-        f"{', '.join(DEFAULT_TARGET_CANDIDATES)}."
-    )
-
-
-def _is_binary_numeric(series: pd.Series) -> bool:
-    if not pd.api.types.is_numeric_dtype(series):
-        return False
-    non_null_values = pd.Series(series.dropna().unique())
-    if non_null_values.empty:
-        return True
-    return non_null_values.isin([0, 1]).all()
 
 
 def infer_feature_groups(X: pd.DataFrame) -> FeatureGroups:
@@ -143,9 +116,18 @@ def get_classifier(model_name: str = "logreg", **model_params):
         default_params.update(model_params)
         return RandomForestClassifier(**default_params)
 
+    if normalized in {"svm", "svc", "support_vector_machine"}:
+        default_params = {
+            "probability": True,
+            "random_state": 42,
+        }
+        default_params.update(model_params)
+        return SVC(**default_params)
+
     raise ValueError(
         "Unsupported model_name. Expected one of: "
-        "logreg, logistic, logistic_regression, rf, random_forest, randomforest."
+        "logreg, logistic, logistic_regression, rf, random_forest, randomforest, "
+        "svm, svc, support_vector_machine."
     )
 
 
@@ -167,24 +149,24 @@ def build_model_pipeline(
 
 def _prepare_model_data(
     df: pd.DataFrame,
-    target_col: str | None = None,
-) -> tuple[pd.DataFrame, pd.Series, str]:
-    resolved_target_col = _resolve_target_col(df, target_col=target_col)
-    X = df.drop(columns=[resolved_target_col]).copy().dropna(axis=1, how="all")
-    y = df[resolved_target_col].astype(int)
-    return X, y, resolved_target_col
+) -> tuple[pd.DataFrame, pd.Series]:
+    if TARGET_COL not in df.columns:
+        raise ValueError(f"Missing target column: {TARGET_COL}")
+
+    X = df.drop(columns=[TARGET_COL]).copy().dropna(axis=1, how="all")
+    y = df[TARGET_COL].astype(int)
+    return X, y
 
 
 def cross_validate_pipeline(
     df: pd.DataFrame,
     model_name: str = "logreg",
-    target_col: str | None = None,
     cv: int = 5,
     random_state: int = 42,
     scoring: str = "roc_auc",
     model_params: dict | None = None,
 ):
-    X, y, _ = _prepare_model_data(df, target_col=target_col)
+    X, y = _prepare_model_data(df)
     model = build_model_pipeline(X, model_name=model_name, model_params=model_params)
     splitter = StratifiedKFold(n_splits=int(cv), shuffle=True, random_state=int(random_state))
     scores = cross_validate(
@@ -209,14 +191,13 @@ def grid_search_pipeline(
     df: pd.DataFrame,
     param_grid: dict,
     model_name: str = "logreg",
-    target_col: str | None = None,
     cv: int = 5,
     random_state: int = 42,
     scoring: str = "roc_auc",
     n_jobs: int = 1,
     model_params: dict | None = None,
 ):
-    X, y, _ = _prepare_model_data(df, target_col=target_col)
+    X, y = _prepare_model_data(df)
     model = build_model_pipeline(X, model_name=model_name, model_params=model_params)
     splitter = StratifiedKFold(n_splits=int(cv), shuffle=True, random_state=int(random_state))
     search = GridSearchCV(
@@ -243,15 +224,13 @@ def grid_search_pipeline(
 def train_pipeline(
     df: pd.DataFrame,
     model_name: str = "logreg",
-    target_col: str | None = None,
     test_size: float = 0.2,
     random_state: int = 42,
     model_params: dict | None = None,
 ):
-    _, _, resolved_target_col = _prepare_model_data(df, target_col=target_col)
     X_train, X_test, y_train, y_test = split_dataset(
         df,
-        target_col=resolved_target_col,
+        target_col=TARGET_COL,
         test_size=test_size,
         random_state=random_state,
     )
