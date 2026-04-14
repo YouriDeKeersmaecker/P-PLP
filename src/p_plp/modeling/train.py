@@ -7,8 +7,10 @@ from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import GridSearchCV, StratifiedKFold, cross_validate
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.feature_selection import SelectKBest, f_classif
 
 from .dataset import TARGET_COL, split_dataset
 
@@ -147,6 +149,97 @@ def get_classifier(model_name: str = "logreg", **model_params):
     )
 
 
+def build_model_pipeline(
+    X: pd.DataFrame,
+    model_name: str = "logreg",
+    model_params: dict | None = None,
+) -> Pipeline:
+    preprocessor = build_preprocessor(X)
+    classifier = get_classifier(model_name=model_name, **(model_params or {}))
+    return Pipeline(
+        steps=[
+            ("preprocessor", preprocessor),
+            ("feature_selection", SelectKBest(score_func=f_classif, k="all")),
+            ("classifier", classifier),
+        ]
+    )
+
+
+def _prepare_model_data(
+    df: pd.DataFrame,
+    target_col: str | None = None,
+) -> tuple[pd.DataFrame, pd.Series, str]:
+    resolved_target_col = _resolve_target_col(df, target_col=target_col)
+    X = df.drop(columns=[resolved_target_col]).copy().dropna(axis=1, how="all")
+    y = df[resolved_target_col].astype(int)
+    return X, y, resolved_target_col
+
+
+def cross_validate_pipeline(
+    df: pd.DataFrame,
+    model_name: str = "logreg",
+    target_col: str | None = None,
+    cv: int = 5,
+    random_state: int = 42,
+    scoring: str = "roc_auc",
+    model_params: dict | None = None,
+):
+    X, y, _ = _prepare_model_data(df, target_col=target_col)
+    model = build_model_pipeline(X, model_name=model_name, model_params=model_params)
+    splitter = StratifiedKFold(n_splits=int(cv), shuffle=True, random_state=int(random_state))
+    scores = cross_validate(
+        model,
+        X,
+        y,
+        cv=splitter,
+        scoring=scoring,
+        return_train_score=False,
+    )
+
+    test_scores = [float(score) for score in scores["test_score"]]
+    return {
+        "scoring": scoring,
+        "fold_scores": test_scores,
+        "mean_score": float(pd.Series(test_scores).mean()),
+        "std_score": float(pd.Series(test_scores).std(ddof=0)),
+    }
+
+
+def grid_search_pipeline(
+    df: pd.DataFrame,
+    param_grid: dict,
+    model_name: str = "logreg",
+    target_col: str | None = None,
+    cv: int = 5,
+    random_state: int = 42,
+    scoring: str = "roc_auc",
+    n_jobs: int = 1,
+    model_params: dict | None = None,
+):
+    X, y, _ = _prepare_model_data(df, target_col=target_col)
+    model = build_model_pipeline(X, model_name=model_name, model_params=model_params)
+    splitter = StratifiedKFold(n_splits=int(cv), shuffle=True, random_state=int(random_state))
+    search = GridSearchCV(
+        estimator=model,
+        param_grid=param_grid,
+        scoring=scoring,
+        cv=splitter,
+        n_jobs=int(n_jobs),
+        refit=True,
+    )
+    search.fit(X, y)
+
+    best_estimator = search.best_estimator_
+    results_df = pd.DataFrame(search.cv_results_).sort_values("rank_test_score").reset_index(drop=True)
+    return {
+        "scoring": scoring,
+        "best_params": dict(search.best_params_),
+        "best_score": float(search.best_score_),
+        "best_estimator": best_estimator,
+        "results_df": results_df,
+    }
+
+
 def train_pipeline(
     df: pd.DataFrame,
     model_name: str = "logreg",
@@ -155,7 +248,7 @@ def train_pipeline(
     random_state: int = 42,
     model_params: dict | None = None,
 ):
-    resolved_target_col = _resolve_target_col(df, target_col=target_col)
+    _, _, resolved_target_col = _prepare_model_data(df, target_col=target_col)
     X_train, X_test, y_train, y_test = split_dataset(
         df,
         target_col=resolved_target_col,
@@ -163,15 +256,7 @@ def train_pipeline(
         random_state=random_state,
     )
 
-    preprocessor = build_preprocessor(X_train)
-    classifier = get_classifier(model_name=model_name, **(model_params or {}))
-
-    model = Pipeline(
-        steps=[
-            ("preprocessor", preprocessor),
-            ("classifier", classifier),
-        ]
-    )
+    model = build_model_pipeline(X_train, model_name=model_name, model_params=model_params)
     model.fit(X_train, y_train)
 
     return model, X_test, y_test
