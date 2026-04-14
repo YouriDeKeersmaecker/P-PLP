@@ -71,6 +71,19 @@ def generate_demographic_cte(engine, name, cfg):
             ON c.subject_id = p.person_id
         )
         """
+    if name == "hospitalizations_count":
+        return f"""
+        {name} AS (
+            SELECT
+                c.subject_id,
+                COUNT(vo.visit_occurrence_id) AS {name}
+            FROM {config.work_schema}.labels c
+            LEFT JOIN {config.cdm_schema}.visit_occurrence vo
+              ON c.subject_id = vo.person_id
+             AND vo.visit_start_date <= c.index_date
+            GROUP BY c.subject_id
+        )
+        """
 
 def build_full_query(engine, config, base_configs) -> str:
     engine_config = get_engine_config(engine)
