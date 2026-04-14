@@ -9,8 +9,9 @@ from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import GridSearchCV, StratifiedKFold, cross_validate
 from sklearn.pipeline import Pipeline
+
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
-from sklearn.feature_selection import SelectKBest, f_classif
+from sklearn.feature_selection import SelectKBest, VarianceThreshold, f_classif
 from sklearn.svm import SVC
 
 from .dataset import TARGET_COL, _prepare_X_y, split_dataset
@@ -108,7 +109,8 @@ def get_classifier(model_name: str = "logreg", **model_params):
     if normalized in {"logreg", "logistic", "logistic_regression"}:
         default_params = {
             "max_iter": 1000,
-            "solver": "liblinear",
+            "solver": "saga",
+            "penalty": "elasticnet",
             "random_state": 42,
         }
         default_params.update(model_params)
@@ -148,7 +150,8 @@ def build_model_pipeline(
     return Pipeline(
         steps=[
             ("preprocessor", preprocessor),
-            ("feature_selection", SelectKBest(score_func=f_classif, k="all")),
+            ("remove_constant", VarianceThreshold()),
+            ("feature_selection", SelectKBest(score_func=f_classif, k=20)),
             ("classifier", classifier),
         ]
     )
@@ -190,7 +193,7 @@ def grid_search_pipeline(
     cv: int = 5,
     random_state: int = 42,
     scoring: str = "roc_auc",
-    n_jobs: int = 1,
+    n_jobs: int = -1,
     model_params: dict | None = None,
 ):
     X, y = _prepare_X_y(df, target_col=TARGET_COL)
