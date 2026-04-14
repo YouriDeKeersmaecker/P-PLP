@@ -1,7 +1,7 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-TARGET_COL = "label"
+TARGET_COL = "outcome_flag"
 
 def _prepare_X_y(
     df: pd.DataFrame,

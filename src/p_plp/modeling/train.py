@@ -13,7 +13,7 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.feature_selection import SelectKBest, f_classif
 from sklearn.svm import SVC
 
-from .dataset import TARGET_COL, split_dataset
+from .dataset import TARGET_COL, _prepare_X_y, split_dataset
 
 @dataclass(frozen=True)
 class FeatureGroups:
@@ -43,6 +43,13 @@ def infer_feature_groups(X: pd.DataFrame) -> FeatureGroups:
         categorical=categorical,
     )
 
+def _is_binary_numeric(series: pd.Series) -> bool:
+    if not pd.api.types.is_numeric_dtype(series):
+        return False
+    non_null_values = pd.Series(series.dropna().unique())
+    if non_null_values.empty:
+        return True
+    return non_null_values.isin([0, 1]).all()
 
 def build_preprocessor(X: pd.DataFrame) -> ColumnTransformer:
     groups = infer_feature_groups(X)
@@ -147,17 +154,6 @@ def build_model_pipeline(
     )
 
 
-def _prepare_model_data(
-    df: pd.DataFrame,
-) -> tuple[pd.DataFrame, pd.Series]:
-    if TARGET_COL not in df.columns:
-        raise ValueError(f"Missing target column: {TARGET_COL}")
-
-    X = df.drop(columns=[TARGET_COL]).copy().dropna(axis=1, how="all")
-    y = df[TARGET_COL].astype(int)
-    return X, y
-
-
 def cross_validate_pipeline(
     df: pd.DataFrame,
     model_name: str = "logreg",
@@ -166,7 +162,7 @@ def cross_validate_pipeline(
     scoring: str = "roc_auc",
     model_params: dict | None = None,
 ):
-    X, y = _prepare_model_data(df)
+    X, y = _prepare_X_y(df, target_col=TARGET_COL)
     model = build_model_pipeline(X, model_name=model_name, model_params=model_params)
     splitter = StratifiedKFold(n_splits=int(cv), shuffle=True, random_state=int(random_state))
     scores = cross_validate(
@@ -197,7 +193,7 @@ def grid_search_pipeline(
     n_jobs: int = 1,
     model_params: dict | None = None,
 ):
-    X, y = _prepare_model_data(df)
+    X, y = _prepare_X_y(df, target_col=TARGET_COL)
     model = build_model_pipeline(X, model_name=model_name, model_params=model_params)
     splitter = StratifiedKFold(n_splits=int(cv), shuffle=True, random_state=int(random_state))
     search = GridSearchCV(
