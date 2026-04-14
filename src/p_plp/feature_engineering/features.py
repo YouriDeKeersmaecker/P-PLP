@@ -85,6 +85,55 @@ def generate_demographic_cte(engine, name, cfg):
         )
         """
 
+def generate_categorical_feature_cte(engine, name, cfg):
+    config = get_engine_config(engine)
+
+    table = cfg["table"]
+    concept_ids = ",".join(map(str, cfg["concept_ids"]))
+    date_col = cfg["date_col"]
+    concept_col = cfg["concept_col"]
+    value_col = cfg["value_col"]
+    start, end = cfg["window"]
+
+    case_clauses = []
+    for label, ids in cfg["value_map"].items():
+        value_ids = ",".join(map(str, ids))
+        case_clauses.append(
+            f"WHEN t.{value_col} IN ({value_ids}) THEN '{label}'"
+        )
+
+    case_sql = "\n                ".join(case_clauses)
+
+    return f"""
+    {name} AS (
+        SELECT
+            subject_id,
+            {name}
+        FROM (
+            SELECT
+                c.subject_id,
+                CASE
+                    {case_sql}
+                    ELSE NULL
+                END AS {name},
+                ROW_NUMBER() OVER (
+                    PARTITION BY c.subject_id
+                    ORDER BY t.{date_col} DESC
+                ) AS rn
+            FROM {config.work_schema}.labels c
+            JOIN {config.cdm_schema}.{table} t
+              ON c.subject_id = t.person_id
+            WHERE t.{concept_col} IN ({concept_ids})
+              AND t.{date_col} BETWEEN
+                  c.index_date + INTERVAL '{start} days'
+                  AND c.index_date + INTERVAL '{end} days'
+        ) ranked
+        WHERE rn = 1
+          AND {name} IS NOT NULL
+    )
+    """
+
+
 def build_full_query(engine, config, base_configs) -> str:
     engine_config = get_engine_config(engine)
 
@@ -103,9 +152,13 @@ def build_full_query(engine, config, base_configs) -> str:
             }
             resolved_cfg.pop("base", None)
 
-            ctes.append(generate_feature_cte(engine, name, resolved_cfg))
-            select_cols.append(f"COALESCE({name}.{name}, 0) AS {name}")
-
+            if "value_map" in resolved_cfg:
+                ctes.append(generate_categorical_feature_cte(engine, name, resolved_cfg))
+                select_cols.append(f"{name}.{name} AS {name}")
+            else:
+                ctes.append(generate_feature_cte(engine, name, resolved_cfg))
+                select_cols.append(f"COALESCE({name}.{name}, 0) AS {name}")
+        
         joins.append(f"LEFT JOIN {name} USING (subject_id)")
 
     cte_sql = ",\n".join(ctes)
