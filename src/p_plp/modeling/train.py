@@ -11,7 +11,7 @@ from sklearn.model_selection import GridSearchCV, StratifiedKFold, cross_validat
 from sklearn.pipeline import Pipeline
 
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
-from sklearn.feature_selection import SelectKBest, VarianceThreshold, f_classif
+from sklearn.feature_selection import SelectKBest, VarianceThreshold, f_classif, mutual_info_classif
 from sklearn.svm import SVC
 
 from .dataset import TARGET_COL, _prepare_X_y, split_dataset
@@ -109,8 +109,9 @@ def get_classifier(model_name: str = "logreg", **model_params):
     if normalized in {"logreg", "logistic", "logistic_regression"}:
         default_params = {
             "max_iter": 1000,
-            "solver": "saga",
-            "penalty": "elasticnet",
+            "solver": "lbfgs",
+            "penalty": "l2",
+            "class_weight": "balanced",
             "random_state": 42,
         }
         default_params.update(model_params)
@@ -151,10 +152,36 @@ def build_model_pipeline(
         steps=[
             ("preprocessor", preprocessor),
             ("remove_constant", VarianceThreshold()),
-            ("feature_selection", SelectKBest(score_func=f_classif, k=20)),
+            ("feature_selection", SelectKBest(score_func=mutual_info_classif, k=20)),
             ("classifier", classifier),
         ]
     )
+
+
+def summarize_feature_selection(model: Pipeline, top_n: int | None = None) -> pd.DataFrame:
+    preprocessor = model.named_steps["preprocessor"]
+    feature_names = pd.Index(preprocessor.get_feature_names_out(), dtype="object")
+
+    remove_constant = model.named_steps.get("remove_constant")
+    if remove_constant is not None and hasattr(remove_constant, "get_support"):
+        feature_names = feature_names[remove_constant.get_support()]
+
+    selector = model.named_steps.get("feature_selection")
+    if selector is None or not hasattr(selector, "get_support"):
+        summary = pd.DataFrame({"feature": feature_names, "selected": True})
+        return summary.head(top_n) if top_n is not None else summary
+
+    selected_mask = selector.get_support()
+    summary = pd.DataFrame(
+        {
+            "feature": feature_names,
+            "score": getattr(selector, "scores_", None),
+            "pvalue": getattr(selector, "pvalues_", None),
+            "selected": selected_mask,
+        }
+    ).sort_values(["selected", "score"], ascending=[False, False], na_position="last")
+
+    return summary.head(top_n) if top_n is not None else summary.reset_index(drop=True)
 
 
 def cross_validate_pipeline(
@@ -216,6 +243,7 @@ def grid_search_pipeline(
         "best_params": dict(search.best_params_),
         "best_score": float(search.best_score_),
         "best_estimator": best_estimator,
+        "feature_selection_summary": summarize_feature_selection(best_estimator),
         "results_df": results_df,
     }
 

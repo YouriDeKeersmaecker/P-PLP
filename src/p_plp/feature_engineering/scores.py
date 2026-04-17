@@ -4,22 +4,21 @@ from __future__ import annotations
 def compute_cha2ds2vasc(row):
     score = 0
 
-    score += row["heart_failure"]
-    score += row["hypertension"]
+    score += int(row["heart_failure"])
+    score += int(row["hypertension"])
 
     if row["age"] >= 75:
         score += 2
     elif row["age"] >= 65:
         score += 1
 
-    score += row["diabetes"]
+    score += int(row["diabetes"])
 
-    if row["ischemic_stroke"]:
+    if int(row["ischemic_stroke"]):
         score += 2
 
-    score += row["peripheral_vascular_disease"]
-
-    if row["gender"] == "female":
+    # gender in your query is probably OMOP gender_concept_id
+    if int(row["gender"]) == 8532:  # female
         score += 1
 
     return score

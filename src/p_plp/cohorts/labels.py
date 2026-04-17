@@ -6,7 +6,7 @@ from p_plp.db.config import get_engine_config
 def generate_labels_time_at_risk(
     engine,
     risk_start_days: int = 1,   # 1 = exclude same-day outcomes; 0 = include
-    risk_end_days: int = 3365
+    risk_end_days: int = 365
 ):
     """Create the labels table by checking outcomes within the time-at-risk window."""
 

@@ -72,6 +72,7 @@ def evaluate(model, X_test, y_test):
 
     if hasattr(model, "predict_proba") and y_test.nunique() > 1:
         y_prob = model.predict_proba(X_test)[:, 1]
+        y_pred = (y_prob >= 0.2).astype(int)
         metrics["roc_auc"] = float(roc_auc_score(y_test, y_prob))
         metrics["roc_auc_ci"] = _bounded_wald_ci(metrics["roc_auc"], total)
         _print_metric("ROC-AUC", metrics["roc_auc"], metrics["roc_auc_ci"])
