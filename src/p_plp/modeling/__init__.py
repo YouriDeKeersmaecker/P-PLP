@@ -15,6 +15,10 @@ from .evaluate import (
     evaluate,
 )
 
+from .utils import (
+    plot_logreg_feature_importance,
+)
+
 __all__ = [
     "split_dataset",
     "build_model_pipeline",
@@ -24,4 +28,5 @@ __all__ = [
     "summarize_feature_selection",
     "train_pipeline",
     "evaluate",
+    "plot_logreg_feature_importance",
 ]
