@@ -19,6 +19,7 @@ from .evaluate import (
 
 from .utils import (
     plot_logreg_feature_importance,
+    plot_rf_feature_importance,
 )
 
 __all__ = [
@@ -33,4 +34,5 @@ __all__ = [
     "evaluate_cross_validation",
     "evaluate_grid_search",
     "plot_logreg_feature_importance",
+    "plot_rf_feature_importance",
 ]
