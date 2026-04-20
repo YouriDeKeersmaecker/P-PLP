@@ -13,6 +13,8 @@ from .train import (
 
 from .evaluate import (
     evaluate,
+    evaluate_cross_validation,
+    evaluate_grid_search,
 )
 
 from .utils import (
@@ -28,5 +30,7 @@ __all__ = [
     "summarize_feature_selection",
     "train_pipeline",
     "evaluate",
+    "evaluate_cross_validation",
+    "evaluate_grid_search",
     "plot_logreg_feature_importance",
 ]

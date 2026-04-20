@@ -35,6 +35,19 @@ def _print_metric(name: str, value: float | None, ci: tuple[float, float] | None
         print(f"{name} 95% CI:", f"({ci[0]:.4f}, {ci[1]:.4f})")
 
 
+def evaluate_cross_validation(cv_results):
+    print("Scoring:", cv_results["scoring"])
+    print("Fold scores:", [round(score, 4) for score in cv_results["fold_scores"]])
+    print("Mean score:", round(cv_results["mean_score"], 4))
+    print("Std score:", round(cv_results["std_score"], 4))
+
+
+def evaluate_grid_search(grid_search_results):
+    print("Scoring:", grid_search_results["scoring"])
+    print("Best score:", round(grid_search_results["best_score"], 4))
+    print("Best params:", grid_search_results["best_params"])
+
+
 def evaluate(model, X_test, y_test):
     y_pred = model.predict(X_test)
 
@@ -82,4 +95,3 @@ def evaluate(model, X_test, y_test):
     print(classification_report(y_test, y_pred, digits=3, zero_division=0))
 
     return metrics
-

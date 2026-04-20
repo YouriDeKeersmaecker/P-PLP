@@ -55,6 +55,8 @@ def build_model_pipeline(
     X: pd.DataFrame,
     model_name: str = "logreg",
     model_params: dict | None = None,
+    feature_selection_k: int = 20,
+    feature_selection_score_func=mutual_info_classif,
 ) -> Pipeline:
     preprocessor = build_preprocessor(X)
     classifier = get_classifier(model_name=model_name, **(model_params or {}))
@@ -62,7 +64,13 @@ def build_model_pipeline(
         steps=[
             ("preprocessor", preprocessor),
             ("remove_constant", VarianceThreshold()),
-            ("feature_selection", SelectKBest(score_func=mutual_info_classif, k=20)),
+            (
+                "feature_selection",
+                SelectKBest(
+                    score_func=feature_selection_score_func,
+                    k=feature_selection_k,
+                ),
+            ),
             ("classifier", classifier),
         ]
     )
@@ -101,9 +109,17 @@ def cross_validate_pipeline(
     random_state: int = 42,
     scoring: str = "roc_auc",
     model_params: dict | None = None,
+    feature_selection_k: int = 20,
+    feature_selection_score_func=mutual_info_classif,
 ):
     X, y = _prepare_X_y(df, target_col=TARGET_COL)
-    model = build_model_pipeline(X, model_name=model_name, model_params=model_params)
+    model = build_model_pipeline(
+        X,
+        model_name=model_name,
+        model_params=model_params,
+        feature_selection_k=feature_selection_k,
+        feature_selection_score_func=feature_selection_score_func,
+    )
     splitter = StratifiedKFold(n_splits=int(cv), shuffle=True, random_state=int(random_state))
     scores = cross_validate(
         model,
@@ -132,9 +148,17 @@ def grid_search_pipeline(
     scoring: str = "roc_auc",
     n_jobs: int = -1,
     model_params: dict | None = None,
+    feature_selection_k: int = 20,
+    feature_selection_score_func=mutual_info_classif,
 ):
     X, y = _prepare_X_y(df, target_col=TARGET_COL)
-    model = build_model_pipeline(X, model_name=model_name, model_params=model_params)
+    model = build_model_pipeline(
+        X,
+        model_name=model_name,
+        model_params=model_params,
+        feature_selection_k=feature_selection_k,
+        feature_selection_score_func=feature_selection_score_func,
+    )
     splitter = StratifiedKFold(n_splits=int(cv), shuffle=True, random_state=int(random_state))
     search = GridSearchCV(
         estimator=model,
@@ -164,6 +188,8 @@ def train_pipeline(
     test_size: float = 0.2,
     random_state: int = 42,
     model_params: dict | None = None,
+    feature_selection_k: int = 20,
+    feature_selection_score_func=mutual_info_classif,
 ):
     X_train, X_test, y_train, y_test = split_dataset(
         df,
@@ -172,7 +198,13 @@ def train_pipeline(
         random_state=random_state,
     )
 
-    model = build_model_pipeline(X_train, model_name=model_name, model_params=model_params)
+    model = build_model_pipeline(
+        X_train,
+        model_name=model_name,
+        model_params=model_params,
+        feature_selection_k=feature_selection_k,
+        feature_selection_score_func=feature_selection_score_func,
+    )
     model.fit(X_train, y_train)
 
     return model, X_test, y_test
