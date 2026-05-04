@@ -20,7 +20,7 @@ Sys.setenv("DATABASECONNECTOR_JAR_FOLDER" = "C:/jdbc")
 packageDescription("PatientLevelPrediction")$Imports
 
 db_info <- paste("user=", "postgres", 
-                 " password=", "Formule1.",
+                 " password=", "",
                  " dbname=", "synpuf100kaws", 
                  " host=", 5432, 
                  " port=", 5432, 
@@ -30,7 +30,7 @@ db_info <- paste("user=", "postgres",
 connectionDetails <- DatabaseConnector::createConnectionDetails(dbms = "postgresql",
                                                                 server = "localhost/synpuf100kaws",
                                                                 user = "postgres",
-                                                                password = "Formule1.",
+                                                                password = "",
                                                                 port = 5432 )
 
 conn <- DatabaseConnector::connect(connectionDetails)
