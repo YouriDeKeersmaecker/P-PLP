@@ -1,13 +1,18 @@
 # P-PLP
 
-P-PLP is a Python library for building patient-level prediction workflows on OMOP CDM data.
+P-PLP is a Python package for patient-level prediction workflows on OMOP CDM data.
 
-The library supports:
+It provides a few focused layers:
 
-- PostgreSQL-backed OMOP databases
-- DuckDB / Eunomia-style local datasets
-- configurable prediction problems
-- feature engineering and model training pipelines
+- `p_plp.db` for database connections and validation
+- `p_plp.cohorts` for Atlas cohort loading and label generation
+- `p_plp.feature_engineering` for feature dataset creation
+- `p_plp.modeling` for model training and evaluation
+- `p_plp.config` for simple configuration objects
 
-Use this documentation for installation, basic usage, and the Python API.
+Supported data sources:
 
+- PostgreSQL OMOP databases
+- DuckDB / Eunomia-style OMOP datasets
+
+The package is currently best used step by step: connect, load cohorts, generate labels, build features, then train a model.
